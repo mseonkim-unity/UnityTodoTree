@@ -27,6 +27,7 @@ namespace UnityEditor.Todo
 		private string _preSearchString = "";
 		private Vector2 _sidebarScrollPos;
         private Vector2 _todoAreaScrollPos;
+        private Vector2[] _todoFieldScrollPositions;
 		private bool _hasTodoDragStarted;
 		private float _startTodoDragPosY;
 		private int _startTodoDragIndex = -1;			// -1: null, others: valid indices
@@ -82,6 +83,9 @@ namespace UnityEditor.Todo
 			_config.AdjustConfigIndices();
 			_data.SyncTagReferences(ref _config);
 			SetCurrentTag(null);
+
+			// Set todo field scroll positions
+			_todoFieldScrollPositions = new Vector2[100];
 		}
 
 		private void LoadTodoConfig()
@@ -204,7 +208,12 @@ namespace UnityEditor.Todo
 						if (hasModified)
 							break;
 					}
-					TodoAddButton();
+
+					using (new HorizontalGroup())
+					{
+						TodoAddButton();
+						SaveButton();
+					}
 				}
 			}
 
@@ -509,7 +518,10 @@ namespace UnityEditor.Todo
 				using (new VerticalGroup())
 				{
 					TodoTitleField(ref todo);
-					todo.description = GUILayout.TextArea(todo.description, GUILayout.Height((float)TodoLayout.TodoFieldHeight - 22f));
+					using (new ScrollViewGroup(ref _todoFieldScrollPositions[index], GUILayout.Height((float)TodoLayout.TodoFieldHeight - 22f)))
+					{
+						todo.description = GUILayout.TextArea(todo.description, GUILayout.ExpandHeight(true));
+					}
 				}
 
 				// Priority & Progress
@@ -620,6 +632,21 @@ namespace UnityEditor.Todo
 			GUI.skin.button.fontStyle = FontStyle.Normal;
 		}
 
+		private void SaveButton()
+		{
+			int originalButtonFontSize = GUI.skin.button.fontSize;
+			GUI.skin.button.fontSize = 14;
+			GUI.skin.button.fontStyle = FontStyle.Bold;
+			GUIContent content = new GUIContent("Save");
+
+			if (GUILayout.Button(content, GUILayout.Height((float)TodoLayout.TodoAddButtonHeight)))
+			{
+				SaveTodoTree();
+			}
+
+			GUI.skin.button.fontSize = originalButtonFontSize;
+			GUI.skin.button.fontStyle = FontStyle.Normal;
+		}
 
 		/** Util Functions */
 		async private void SetCurrentTag(Tag tag)
@@ -648,6 +675,19 @@ namespace UnityEditor.Todo
 			{
 				_showTodoGroup = true;
 				_selectedGroup = _currentGroups[index];
+				// Reset todo field scroll positions
+				if (_todoFieldScrollPositions.Length < _selectedGroup.todos.Count)
+				{
+					_todoFieldScrollPositions = new Vector2[_selectedGroup.todos.Count];
+				}
+				else
+				{
+					for (int i = 0; i < _todoFieldScrollPositions.Length; i++)
+					{
+						_todoFieldScrollPositions[i].x = 0f;
+						_todoFieldScrollPositions[i].y = 0f;
+					}
+				}
 			}
 			SetSelectedTodo(null);
 			Repaint();
