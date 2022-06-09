@@ -641,7 +641,14 @@ namespace UnityEditor.Todo
 
 			if (GUILayout.Button(content, GUILayout.Height((float)TodoLayout.TodoAddButtonHeight)))
 			{
-				SaveTodoTree();
+				if (EditorApplication.isPlayingOrWillChangePlaymode)
+				{
+					Debug.LogWarning("Can't save todo tree in play mode");
+				}
+				else
+				{
+					SaveTodoTree();
+				}
 			}
 
 			GUI.skin.button.fontSize = originalButtonFontSize;
